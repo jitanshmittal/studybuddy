@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyBuddy Pro - MBA Exam Prep Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-primary-hover: #1d4ed8;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+            --color-bg: #ffffff;
+            --color-surface: #f8fafc;
+            --color-text: #1e293b;
+            --color-text-secondary: #64748b;
+            --color-border: #e2e8f0;
+            --color-shadow: rgba(0, 0, 0, 0.1);
+            --spacing: 1rem;
+        }
+
+        [data-color-scheme="dark"] {
+            --color-primary: #3b82f6;
+            --color-primary-hover: #60a5fa;
+            --color-success: #34d399;
+            --color-warning: #fbbf24;
+            --color-danger: #f87171;
+            --color-bg: #0f172a;
+            --color-surface: #1e293b;
+            --color-text: #f1f5f9;
+            --color-text-secondary: #94a3b8;
+            --color-border: #334155;
+            --color-shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-color-scheme="light"]) {
+                --color-primary: #3b82f6;
+                --color-primary-hover: #60a5fa;
+                --color-success: #34d399;
+                --color-warning: #fbbf24;
+                --color-danger: #f87171;
+                --color-bg: #0f172a;
+                --color-surface: #1e293b;
+                --color-text: #f1f5f9;
+                --color-text-secondary: #94a3b8;
+                --color-border: #334155;
+                --color-shadow: rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Header */
+        .header {
+            background: var(--color-surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px var(--color-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            color: var(--color-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .streak-badge {
+            background: linear-gradient(135deg, var(--color-warning), var(--color-danger));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sync-status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sync-status.synced {
+            background: linear-gradient(135deg, var(--color-success), #059669);
+            color: white;
+        }
+
+        .sync-status.syncing {
+            background: linear-gradient(135deg, var(--color-warning), #d97706);
+            color: white;
+        }
+
+        .sync-status.offline {
+            background: linear-gradient(135deg, var(--color-danger), #dc2626);
+            color: white;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            padding: 0.5rem 0;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .nav-tabs::-webkit-scrollbar-thumb {
+            background: var(--color-primary);
+            border-radius: 4px;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.25rem;
+            background: var(--color-surface);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-tab:hover {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .nav-tab.active {
+            background: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--color-surface);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px var(--color-shadow);
+            border: 1px solid var(--color-border);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Grid Layouts */
+        .grid {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+        /* Stats Cards */
+        .stat-card {
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px var(--color-shadow);
+        }
+
+        .stat-card.success { background: linear-gradient(135deg, var(--color-success), #059669); }
+        .stat-card.warning { background: linear-gradient(135deg, var(--color-warning), #d97706); }
+        .stat-card.danger { background: linear-gradient(135deg, var(--color-danger), #dc2626); }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--color-border);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--color-bg);
+            color: var(--color-text);
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover { background: var(--color-primary-hover); }
+
+        .btn-success {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .btn-success:hover { background: #059669; }
+
+        .btn-danger {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        .btn-danger:hover { background: #dc2626; }
+
+        .btn-secondary {
+            background: var(--color-surface);
+            color: var(--color-text);
+            border: 2px solid var(--color-border);
+        }
+
+        .btn-secondary:hover { background: var(--color-border); }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        th {
+            background: var(--color-surface);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background: var(--color-surface);
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-top: 1rem;
+        }
+
+        /* Pomodoro Timer */
+        .pomodoro-display {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .timer-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: var(--color-surface);
+            border: 8px solid var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            box-shadow: 0 8px 16px var(--color-shadow);
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--color-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+        }
+
+        /* Auth Container */
+        .auth-container {
+            max-width: 400px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--color-surface);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px var(--color-shadow);
+        }
+
+        .auth-container h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--color-primary);
+        }
+
+        #appContent {
+            display: none;
+        }
+
+        #appContent.active {
+            display: block;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--color-success);
+            border: 1px solid var(--color-success);
+        }
+
+        .alert-info {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--color-primary);
+            border: 1px solid var(--color-primary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 280px;
+            }
+
+            .timer-circle {
+                width: 150px;
+                height: 150px;
+                font-size: 2rem;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .modal-content {
+                padding: 1.5rem;
+            }
+
+            table {
+                font-size: 0.875rem;
+            }
+
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+
+        .error-item {
+            background: var(--color-surface);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--color-danger);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--color-text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Section -->
+    <div id="authSection">
+        <div class="auth-container">
+            <h2>📚 StudyBuddy Pro</h2>
+            <div class="alert alert-info">
+                <strong>🔒 Secure Cloud Sync:</strong> Sign in to sync your data across devices with Firebase.
+            </div>
+            
+            <div id="signInForm">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="authEmail" placeholder="your.email@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="authPassword" placeholder="Enter password">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="signIn()">
+                    🔐 Sign In
+                </button>
+                <button class="btn btn-secondary btn-block" style="margin-top: 0.5rem;" onclick="signUp()">
+                    ✨ Create Account
+                </button>
+                <button class="btn btn-secondary btn-block" style="margin-top: 0.5rem;" onclick="continueOffline()">
+                    💾 Continue Offline (Local Storage)
+                </button>
+            </div>
+
+            <div id="signedInInfo" style="display: none;">
+                <div class="alert alert-success">
+                    <strong>✅ Signed in as:</strong> <span id="userEmail"></span>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="goToApp()">📊 Open Dashboard</button>
+                <button class="btn btn-danger btn-block" style="margin-top: 0.5rem;" onclick="signOut()">
+                    🚪 Sign Out
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Content -->
+    <div id="appContent">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <h1>
+                    <span>📚</span>
+                    StudyBuddy Pro
+                </h1>
+                <div class="header-actions">
+                    <div class="sync-status synced" id="syncStatus">
+                        ☁️ <span id="syncText">Synced</span>
+                    </div>
+                    <div class="streak-badge" id="streakBadge">
+                        🔥 <span id="streakCount">0</span> Day Streak
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleTheme()">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button class="btn btn-danger btn-sm" id="logoutBtn" onclick="handleLogout()">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('dashboard')">
+                    📊 Dashboard
+                </button>
+                <button class="nav-tab" onclick="switchTab('mockTests')">
+                    📝 Mock Tests
+                </button>
+                <button class="nav-tab" onclick="switchTab('errorLog')">
+                    ⚠️ Error Log
+                </button>
+                <button class="nav-tab" onclick="switchTab('pomodoro')">
+                    🍅 Pomodoro
+                </button>
+                <button class="nav-tab" onclick="switchTab('studyTracker')">
+                    ⏱️ Study Tracker
+                </button>
+                <button class="nav-tab" onclick="switchTab('goals')">
+                    🎯 Goals
+                </button>
+                <button class="nav-tab" onclick="switchTab('resources')">
+                    📚 Resources
+                </button>
+                <button class="nav-tab" onclick="switchTab('profile')">
+                    👤 Profile
+                </button>
+                <button class="nav-tab" onclick="switchTab('aiAdvisor')">
+                    🤖 AI Advisor
+                </button>
+                <button class="nav-tab" onclick="switchTab('settings')">
+                    ⚙️ Settings
+                </button>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <div class="grid grid-4">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Study Hours</div>
+                        <div class="stat-value" id="totalHours">0</div>
+                        <div class="stat-label">This Week</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">Mock Tests</div>
+                        <div class="stat-value" id="totalMocks">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-label">Average Score</div>
+                        <div class="stat-value" id="avgScore">0</div>
+                        <div class="stat-label">Last 10 Tests</div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-label">Active Errors</div>
+                        <div class="stat-value" id="activeErrors">0</div>
+                        <div class="stat-label">Need Review</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">⚡ Quick Actions</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                        <button class="btn btn-primary" onclick="switchTab('mockTests'); showAddMockModal()">📝 Add Mock</button>
+                        <button class="btn btn-primary" onclick="switchTab('errorLog'); showAddErrorModal()">⚠️ Log Error</button>
+                        <button class="btn btn-primary" onclick="switchTab('pomodoro'); startPomodoro()">🍅 Pomodoro</button>
+                        <button class="btn btn-primary" onclick="switchTab('studyTracker'); startStudySession()">⏱️ Study</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📈 Mock Test Performance Trend</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="mockTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mock Tests Tab -->
+            <div id="mockTests" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📝 Mock Test Records</div>
+                        <button class="btn btn-primary btn-sm" onclick="showAddMockModal()">
+                            ➕ Add Mock Test
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="mockTestsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Exam</th>
+                                    <th>Overall</th>
+                                    <th>VARC</th>
+                                    <th>DILR</th>
+                                    <th>QA</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mockTestsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="mockTestsEmpty" class="empty-state" style="display: none;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+                        <h3>No Mock Tests Yet</h3>
+                        <p>Add your first mock test to track your performance!</p>
+                        <button class="btn btn-primary" onclick="showAddMockModal()">Add Mock Test</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Log Tab -->
+            <div id="errorLog" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">⚠️ Error Log &amp; Revision Tracker</div>
+                        <button class="btn btn-primary btn-sm" onclick="showAddErrorModal()">
+                            ➕ Add Error
+                        </button>
+                    </div>
+                    <div id="errorLogContent"></div>
+                    <div id="errorLogEmpty" class="empty-state" style="display: none;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+                        <h3>No Errors Logged</h3>
+                        <p>Keep track of your mistakes to improve faster!</p>
+                        <button class="btn btn-primary" onclick="showAddErrorModal()">Log First Error</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pomodoro Tab -->
+            <div id="pomodoro" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🍅 Pomodoro Timer</div>
+                    </div>
+                    <div class="pomodoro-display">
+                        <div class="timer-circle" id="timerDisplay">25:00</div>
+                        <div class="timer-controls">
+                            <button class="btn btn-success" id="startPomodoroBtn" onclick="startPomodoro()">
+                                ▶️ Start
+                            </button>
+                            <button class="btn btn-warning" id="pausePomodoroBtn" onclick="pausePomodoro()" style="display: none;">
+                                ⏸️ Pause
+                            </button>
+                            <button class="btn btn-danger" onclick="resetPomodoro()">
+                                🔄 Reset
+                            </button>
+                        </div>
+                        <div style="margin-top: 1.5rem;">
+                            <strong>Completed Today:</strong> <span id="pomodorosToday">0</span> 🍅
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Study Tracker Tab -->
+            <div id="studyTracker" class="tab-content">
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">⏱️ Current Session</div>
+                        </div>
+                        <div id="currentSession">
+                            <div class="form-group">
+                                <label class="form-label">Subject</label>
+                                <select class="form-control" id="sessionSubject">
+                                    <option value="">Select Subject</option>
+                                    <option value="VARC">Verbal Ability &amp; RC</option>
+                                    <option value="DILR">Data Interpretation &amp; LR</option>
+                                    <option value="QA">Quantitative Aptitude</option>
+                                    <option value="GK">General Knowledge</option>
+                                    <option value="Essay">Essay Writing</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success btn-block" onclick="startStudySession()">
+                                ▶️ Start Session
+                            </button>
+                        </div>
+                        <div id="activeSession" style="display: none;">
+                            <div class="alert alert-success">
+                                <strong>Session Active!</strong>
+                                <div style="margin-top: 0.5rem;">
+                                    Subject: <strong id="activeSubject"></strong><br>
+                                    Duration: <strong id="sessionDuration">00:00:00</strong>
+                                </div>
+                            </div>
+                            <button class="btn btn-danger btn-block" onclick="endStudySession()">
+                                ⏹️ End Session
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 Today's Summary</div>
+                        </div>
+                        <div id="todaySummary">
+                            <div class="stat-card">
+                                <div class="stat-label">Total Time Today</div>
+                                <div class="stat-value" id="todayTotalTime">0h 0m</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Goals Tab -->
+            <div id="goals" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🎯 Study Goals</div>
+                        <button class="btn btn-primary btn-sm" onclick="showAddGoalModal()">
+                            ➕ Add Goal
+                        </button>
+                    </div>
+                    <div id="goalsContent"></div>
+                    <div id="goalsEmpty" class="empty-state" style="display: none;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🎯</div>
+                        <h3>No Goals Set</h3>
+                        <p>Set your study goals to stay motivated!</p>
+                        <button class="btn btn-primary" onclick="showAddGoalModal()">Set Your First Goal</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources Tab -->
+            <div id="resources" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📚 Study Resources</div>
+                        <button class="btn btn-primary btn-sm" onclick="showAddResourceModal()">
+                            ➕ Add Resource
+                        </button>
+                    </div>
+                    <div id="resourcesContent"></div>
+                </div>
+            </div>
+
+            <!-- AI Advisor Tab -->
+            <div id="aiAdvisor" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🤖 AI Study Advisor</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>💡 Personalized Recommendations:</strong> Get AI-powered insights based on your mock tests, error patterns, study habits, and goals.
+                    </div>
+
+                    <div class="grid grid-3" style="margin-bottom: 1.5rem;">
+                        <button class="btn btn-primary" onclick="getAIRecommendation('performance')">
+                            📊 Analyze Performance
+                        </button>
+                        <button class="btn btn-primary" onclick="getAIRecommendation('weaknesses')">
+                            🎯 Identify Weaknesses
+                        </button>
+                        <button class="btn btn-primary" onclick="getAIRecommendation('studyplan')">
+                            📅 Create Study Plan
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ask AI Advisor</label>
+                        <textarea class="form-control" id="aiQuery" placeholder="e.g., How can I improve my DILR score? What should I focus on this week?"></textarea>
+                    </div>
+                    
+                    <button class="btn btn-success btn-block" onclick="askAIAdvisor()">
+                        🚀 Get Personalized Advice
+                    </button>
+
+                    <div id="aiResponse" style="margin-top: 1.5rem;"></div>
+                </div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profile" class="tab-content">
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">👤 Personal Information</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="profileName" placeholder="Your Name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Target Exam Date</label>
+                            <input type="date" class="form-control" id="profileExamDate">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Primary Exam Focus</label>
+                            <select class="form-control" id="profileExam">
+                                <option value="CAT">CAT</option>
+                                <option value="XAT">XAT</option>
+                                <option value="NMAT">NMAT</option>
+                                <option value="SNAP">SNAP</option>
+                                <option value="Multiple">Multiple Exams</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveProfile()">💾 Save Profile</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 Your Stats</div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div style="background: var(--color-primary); color: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Total Study Time</div>
+                                <div style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0;" id="profileTotalHours">0h</div>
+                            </div>
+                            <div style="background: var(--color-success); color: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Mock Tests</div>
+                                <div style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0;" id="profileTotalMocks">0</div>
+                            </div>
+                            <div style="background: var(--color-warning); color: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Current Streak</div>
+                                <div style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0;" id="profileStreak">0</div>
+                            </div>
+                            <div style="background: var(--color-danger); color: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.9;">Errors Logged</div>
+                                <div style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0;" id="profileErrors">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">⚙️ Settings</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Target Colleges</label>
+                        <textarea class="form-control" id="targetColleges" placeholder="e.g., IIM Bangalore - 99%ile, XLRI - 95%ile"></textarea>
+                        <button class="btn btn-primary btn-sm" style="margin-top: 0.5rem;" onclick="saveTargetColleges()">Save Colleges</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Daily Study Goal (hours)</label>
+                        <input type="number" class="form-control" id="dailyGoal" value="8" min="1" max="24">
+                        <button class="btn btn-primary btn-sm" style="margin-top: 0.5rem;" onclick="saveDailyGoal()">Save Goal</button>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>☁️ Cloud Sync:</strong> <span id="cloudSyncStatus">Active</span>. Your data is automatically synced to Firebase.
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="exportToJSON()">
+                            📄 Export to JSON
+                        </button>
+                        <button class="btn btn-success" onclick="exportToExcel()">
+                            📊 Export to Excel
+                        </button>
+                        <button class="btn btn-secondary" onclick="importData()">
+                            📥 Import Data
+                        </button>
+                        <button class="btn btn-danger" onclick="confirmClearData()">
+                            🗑️ Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Mock Test Modal -->
+    <div class="modal" id="addMockModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Mock Test</h2>
+                <button class="close-modal" onclick="closeModal('addMockModal')">&times;</button>
+            </div>
+            <form id="mockTestForm" onsubmit="addMockTest(event)">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" id="mockDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Exam Type</label>
+                    <select class="form-control" id="mockExam" required>
+                        <option value="CAT">CAT</option>
+                        <option value="XAT">XAT</option>
+                        <option value="NMAT">NMAT</option>
+                        <option value="SNAP">SNAP</option>
+                        <option value="IIFT">IIFT</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mock Name</label>
+                    <input type="text" class="form-control" id="mockName" placeholder="e.g., CAT Mock 15" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Overall Percentile</label>
+                    <input type="number" class="form-control" id="mockOverall" min="0" max="100" step="0.01" required>
+                </div>
+                <h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Section-wise Scores</h3>
+                <div class="form-group">
+                    <label class="form-label">VARC Percentile</label>
+                    <input type="number" class="form-control" id="mockVARC" min="0" max="100" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">DILR Percentile</label>
+                    <input type="number" class="form-control" id="mockDILR" min="0" max="100" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">QA Percentile</label>
+                    <input type="number" class="form-control" id="mockQA" min="0" max="100" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="mockNotes" placeholder="Key observations, mistakes, etc."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Mock Test</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Error Modal -->
+    <div class="modal" id="addErrorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Log Error</h2>
+                <button class="close-modal" onclick="closeModal('addErrorModal')">&times;</button>
+            </div>
+            <form id="errorForm" onsubmit="addError(event)">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" id="errorDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <select class="form-control" id="errorSubject" required>
+                        <option value="VARC">VARC</option>
+                        <option value="DILR">DILR</option>
+                        <option value="QA">QA</option>
+                        <option value="GK">GK</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Concept/Topic</label>
+                    <input type="text" class="form-control" id="errorConcept" placeholder="e.g., Permutation &amp; Combination, RC - Inference" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Error Description</label>
+                    <textarea class="form-control" id="errorDescription" placeholder="What went wrong? Why did you make this mistake?" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Solution/Learning</label>
+                    <textarea class="form-control" id="errorSolution" placeholder="How to avoid this in future?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Next Review Date</label>
+                    <input type="date" class="form-control" id="errorReviewDate">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Log Error</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Goal Modal -->
+    <div class="modal" id="addGoalModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Study Goal</h2>
+                <button class="close-modal" onclick="closeModal('addGoalModal')">&times;</button>
+            </div>
+            <form id="goalForm" onsubmit="addGoal(event)">
+                <div class="form-group">
+                    <label class="form-label">Goal Title</label>
+                    <input type="text" class="form-control" id="goalTitle" placeholder="e.g., Complete 50 DILR Sets" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Date</label>
+                    <input type="date" class="form-control" id="goalDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select class="form-control" id="goalCategory">
+                        <option value="VARC">VARC</option>
+                        <option value="DILR">DILR</option>
+                        <option value="QA">QA</option>
+                        <option value="General">General</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Goal</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Resource Modal -->
+    <div class="modal" id="addResourceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Resource</h2>
+                <button class="close-modal" onclick="closeModal('addResourceModal')">&times;</button>
+            </div>
+            <form id="resourceForm" onsubmit="addResource(event)">
+                <div class="form-group">
+                    <label class="form-label">Resource Title</label>
+                    <input type="text" class="form-control" id="resourceTitle" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">URL</label>
+                    <input type="url" class="form-control" id="resourceURL" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select class="form-control" id="resourceCategory">
+                        <option value="VARC">VARC</option>
+                        <option value="DILR">DILR</option>
+                        <option value="QA">QA</option>
+                        <option value="General">General</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-control" id="resourceType">
+                        <option value="Video">Video</option>
+                        <option value="Article">Article</option>
+                        <option value="PDF">PDF</option>
+                        <option value="Practice">Practice Set</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Resource</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration with YOUR credentials
+        const firebaseConfig = {
+            apiKey: "AIzaSyCo2dPho0a0yAl_OgpHu6nAHIMG8LtCZOo",
+            authDomain: "studdybuddy-beb37.firebaseapp.com",
+            databaseURL: "https://studdybuddy-beb37-default-rtdb.firebaseio.com",
+            projectId: "studdybuddy-beb37",
+            storageBucket: "studdybuddy-beb37.firebasestorage.app",
+            messagingSenderId: "889299784005",
+            appId: "1:889299784005:web:90d33fdb579469dbb06e2c",
+            measurementId: "G-WQ3C4LNDJX"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        let currentUser = null;
+        let isOfflineMode = false;
+        let mockTrendChartInstance = null;
+        let appData = {
+            mockTests: [],
+            errors: [],
+            goals: [],
+            resources: [],
+            sessions: [],
+            profile: {},
+            settings: {}
+        };
+
+        // Auth state listener
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            updateAuthUI();
+            if (user) {
+                loadUserData();
+            } else {
+                loadLocalData();
+            }
+        });
+
+        function updateAuthUI() {
+            const authSection = document.getElementById('authSection');
+            const appContent = document.getElementById('appContent');
+            const signInForm = document.querySelector('#signInForm');
+            const signedInInfo = document.querySelector('#signedInInfo');
+
+            if (currentUser) {
+                authSection.style.display = 'none';
+                appContent.classList.add('active');
+                signInForm.style.display = 'none';
+                signedInInfo.style.display = 'block';
+                document.getElementById('userEmail').textContent = currentUser.email;
+            } else if (!isOfflineMode) {
+                authSection.style.display = 'block';
+                appContent.classList.remove('active');
+                signInForm.style.display = 'block';
+                signedInInfo.style.display = 'none';
+            }
+        }
+
+        async function signIn() {
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            
+            if (!email || !password) {
+                alert('Please enter email and password');
+                return;
+            }
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                console.log('✅ Signed in successfully');
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function signUp() {
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            
+            if (!email || !password) {
+                alert('Please enter email and password');
+                return;
+            }
+            
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+                console.log('✅ Account created successfully');
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function signOut() {
+            try {
+                await auth.signOut();
+                currentUser = null;
+                updateAuthUI();
+                console.log('✅ Signed out successfully');
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        function handleLogout() {
+            if (isOfflineMode) {
+                isOfflineMode = false;
+                updateAuthUI();
+            } else {
+                signOut();
+            }
+        }
+
+        function goToApp() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('appContent').classList.add('active');
+        }
+
+        function continueOffline() {
+            isOfflineMode = true;
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('appContent').classList.add('active');
+            loadLocalData();
+            updateSyncStatus('offline');
+        }
+
+        async function loadUserData() {
+            if (!currentUser) return;
+            
+            try {
+                updateSyncStatus('syncing');
+                const snapshot = await database.ref(`users/${currentUser.uid}`).get();
+                if (snapshot.exists()) {
+                    appData = snapshot.val();
+                    console.log('✅ Data loaded from Firebase');
+                }
+                updateSyncStatus('synced');
+                refreshUI();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                updateSyncStatus('offline');
+                loadLocalData();
+            }
+        }
+
+        function loadLocalData() {
+            const stored = localStorage.getItem('studyBuddyData');
+            if (stored) {
+                appData = JSON.parse(stored);
+                console.log('✅ Data loaded from local storage');
+            }
+            refreshUI();
+        }
+
+        async function saveUserData() {
+            localStorage.setItem('studyBuddyData', JSON.stringify(appData));
+            
+            if (currentUser && !isOfflineMode) {
+                try {
+                    updateSyncStatus('syncing');
+                    await database.ref(`users/${currentUser.uid}`).set(appData);
+                    console.log('✅ Data synced to Firebase');
+                    updateSyncStatus('synced');
+                } catch (error) {
+                    console.error('Sync error:', error);
+                    updateSyncStatus('offline');
+                }
+            }
+        }
+
+        function updateSyncStatus(status) {
+            const syncElement = document.getElementById('syncStatus');
+            const syncText = document.getElementById('syncText');
+            
+            syncElement.className = 'sync-status ' + status;
+            
+            if (status === 'synced') {
+                syncText.textContent = isOfflineMode ? 'Offline' : 'Synced';
+            } else if (status === 'syncing') {
+                syncText.textContent = 'Syncing...';
+            } else {
+                syncText.textContent = 'Offline';
+            }
+        }
+
+        // UI Functions
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-color-scheme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-color-scheme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            document.getElementById('themeIcon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Mock Test Functions
+        function showAddMockModal() {
+            document.getElementById('addMockModal').classList.add('active');
+            document.getElementById('mockDate').valueAsDate = new Date();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function addMockTest(event) {
+            event.preventDefault();
+            
+            const mockTest = {
+                id: Date.now(),
+                date: document.getElementById('mockDate').value,
+                exam: document.getElementById('mockExam').value,
+                name: document.getElementById('mockName').value,
+                overall: parseFloat(document.getElementById('mockOverall').value),
+                varc: parseFloat(document.getElementById('mockVARC').value) || null,
+                dilr: parseFloat(document.getElementById('mockDILR').value) || null,
+                qa: parseFloat(document.getElementById('mockQA').value) || null,
+                notes: document.getElementById('mockNotes').value
+            };
+            
+            appData.mockTests.push(mockTest);
+            saveUserData();
+            closeModal('addMockModal');
+            document.getElementById('mockTestForm').reset();
+            refreshUI();
+            alert('✅ Mock test added successfully!');
+        }
+
+        function renderMockTests() {
+            const tbody = document.getElementById('mockTestsBody');
+            const empty = document.getElementById('mockTestsEmpty');
+            
+            if (appData.mockTests.length === 0) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            empty.style.display = 'none';
+            tbody.innerHTML = appData.mockTests
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map(test => `
+                    <tr>
+                        <td>${test.date}</td>
+                        <td>${test.exam}</td>
+                        <td><strong>${test.overall.toFixed(1)}</strong>%ile</td>
+                        <td>${test.varc ? test.varc.toFixed(1) : '-'}</td>
+                        <td>${test.dilr ? test.dilr.toFixed(1) : '-'}</td>
+                        <td>${test.qa ? test.qa.toFixed(1) : '-'}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="deleteMockTest(${test.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
+        function deleteMockTest(id) {
+            appData.mockTests = appData.mockTests.filter(t => t.id !== id);
+            saveUserData();
+            refreshUI();
+        }
+
+        // Chart Creation Function
+        function createMockTrendChart() {
+            const ctx = document.getElementById('mockTrendChart');
+            if (!ctx) return;
+
+            const sortedTests = [...appData.mockTests].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            if (sortedTests.length === 0) {
+                ctx.style.display = 'none';
+                return;
+            }
+
+            ctx.style.display = 'block';
+
+            const labels = sortedTests.map(t => t.date);
+            const overall = sortedTests.map(t => t.overall);
+            const varc = sortedTests.map(t => t.varc || null);
+            const dilr = sortedTests.map(t => t.dilr || null);
+            const qa = sortedTests.map(t => t.qa || null);
+
+            if (mockTrendChartInstance) {
+                mockTrendChartInstance.destroy();
+            }
+
+            mockTrendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Overall Percentile',
+                            data: overall,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#2563eb',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'VARC',
+                            data: varc,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#f59e0b',
+                            yAxisID: 'y',
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'DILR',
+                            data: dilr,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#10b981',
+                            yAxisID: 'y',
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'QA',
+                            data: qa,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#ef4444',
+                            yAxisID: 'y',
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                font: {
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                            borderWidth: 1,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + (context.parsed.y ? context.parsed.y.toFixed(1) : 'N/A') + '%ile';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Percentile'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Test Date'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Error Log Functions
+        function showAddErrorModal() {
+            document.getElementById('addErrorModal').classList.add('active');
+            document.getElementById('errorDate').valueAsDate = new Date();
+        }
+
+        function addError(event) {
+            event.preventDefault();
+            
+            const error = {
+                id: Date.now(),
+                date: document.getElementById('errorDate').value,
+                subject: document.getElementById('errorSubject').value,
+                concept: document.getElementById('errorConcept').value,
+                description: document.getElementById('errorDescription').value,
+                solution: document.getElementById('errorSolution').value,
+                reviewDate: document.getElementById('errorReviewDate').value,
+                status: 'pending'
+            };
+            
+            appData.errors.push(error);
+            saveUserData();
+            closeModal('addErrorModal');
+            document.getElementById('errorForm').reset();
+            refreshUI();
+            alert('✅ Error logged successfully!');
+        }
+
+        function renderErrorLog() {
+            const content = document.getElementById('errorLogContent');
+            const empty = document.getElementById('errorLogEmpty');
+            
+            if (appData.errors.length === 0) {
+                content.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            empty.style.display = 'none';
+            content.innerHTML = appData.errors
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map(error => `
+                    <div class="error-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--color-danger);">${error.concept}</div>
+                                <div style="font-size: 0.875rem; color: var(--color-text-secondary);">${error.date} • ${error.subject}</div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="deleteError(${error.id})">Delete</button>
+                        </div>
+                        <div style="margin-top: 0.5rem; font-size: 0.9rem; line-height: 1.5;">
+                            <strong>Error:</strong> ${error.description}<br>
+                            <strong>Solution:</strong> ${error.solution || 'Not specified'}<br>
+                            ${error.reviewDate ? `<strong>Next Review:</strong> ${error.reviewDate}` : ''}
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function deleteError(id) {
+            appData.errors = appData.errors.filter(e => e.id !== id);
+            saveUserData();
+            refreshUI();
+        }
+
+        // Pomodoro Timer Functions
+        let pomodoroTime = 25 * 60;
+        let pomodoroInterval = null;
+        let pomodoroRunning = false;
+
+        function startPomodoro() {
+            if (pomodoroRunning) return;
+            pomodoroRunning = true;
+            document.getElementById('startPomodoroBtn').style.display = 'none';
+            document.getElementById('pausePomodoroBtn').style.display = 'block';
+            
+            pomodoroInterval = setInterval(() => {
+                pomodoroTime--;
+                updateTimerDisplay();
+                
+                if (pomodoroTime <= 0) {
+                    pausePomodoro();
+                }
+            }, 1000);
+        }
+
+        function pausePomodoro() {
+            pomodoroRunning = false;
+            clearInterval(pomodoroInterval);
+            document.getElementById('startPomodoroBtn').style.display = 'block';
+            document.getElementById('pausePomodoroBtn').style.display = 'none';
+        }
+
+        function resetPomodoro() {
+            pausePomodoro();
+            pomodoroTime = 25 * 60;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(pomodoroTime / 60);
+            const seconds = pomodoroTime % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Study Session Functions
+        let activeSession = null;
+        let sessionInterval = null;
+
+        function startStudySession() {
+            const subject = document.getElementById('sessionSubject').value;
+            if (!subject) {
+                alert('Please select a subject');
+                return;
+            }
+            
+            activeSession = {
+                id: Date.now(),
+                subject: subject,
+                date: new Date().toISOString().split('T')[0],
+                startTime: new Date(),
+                duration: 0
+            };
+            
+            document.getElementById('currentSession').style.display = 'none';
+            document.getElementById('activeSession').style.display = 'block';
+            document.getElementById('activeSubject').textContent = subject;
+            
+            sessionInterval = setInterval(() => {
+                activeSession.duration++;
+                const hours = Math.floor(activeSession.duration / 3600);
+                const minutes = Math.floor((activeSession.duration % 3600) / 60);
+                const seconds = activeSession.duration % 60;
+                document.getElementById('sessionDuration').textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function endStudySession() {
+            clearInterval(sessionInterval);
+            if (activeSession) {
+                appData.sessions = appData.sessions || [];
+                appData.sessions.push(activeSession);
+                saveUserData();
+            }
+            activeSession = null;
+            document.getElementById('currentSession').style.display = 'block';
+            document.getElementById('activeSession').style.display = 'none';
+            refreshUI();
+            alert('✅ Session saved!');
+        }
+
+        // Goals Functions
+        function showAddGoalModal() {
+            document.getElementById('addGoalModal').classList.add('active');
+        }
+
+        function addGoal(event) {
+            event.preventDefault();
+            
+            const goal = {
+                id: Date.now(),
+                title: document.getElementById('goalTitle').value,
+                date: document.getElementById('goalDate').value,
+                category: document.getElementById('goalCategory').value,
+                completed: false
+            };
+            
+            appData.goals = appData.goals || [];
+            appData.goals.push(goal);
+            saveUserData();
+            closeModal('addGoalModal');
+            document.getElementById('goalForm').reset();
+            refreshUI();
+        }
+
+        function renderGoals() {
+            const content = document.getElementById('goalsContent');
+            const empty = document.getElementById('goalsEmpty');
+            
+            if (!appData.goals || appData.goals.length === 0) {
+                content.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            empty.style.display = 'none';
+            content.innerHTML = appData.goals
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .map(goal => `
+                    <div class="card" style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h4>${goal.title}</h4>
+                                <p style="margin: 0.5rem 0; color: var(--color-text-secondary);">
+                                    ${goal.category} • Due: ${goal.date}
+                                </p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="deleteGoal(${goal.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function deleteGoal(id) {
+            appData.goals = appData.goals.filter(g => g.id !== id);
+            saveUserData();
+            refreshUI();
+        }
+
+        // Resources Functions
+        function showAddResourceModal() {
+            document.getElementById('addResourceModal').classList.add('active');
+        }
+
+        function addResource(event) {
+            event.preventDefault();
+            
+            const resource = {
+                id: Date.now(),
+                title: document.getElementById('resourceTitle').value,
+                url: document.getElementById('resourceURL').value,
+                category: document.getElementById('resourceCategory').value,
+                type: document.getElementById('resourceType').value
+            };
+            
+            appData.resources = appData.resources || [];
+            appData.resources.push(resource);
+            saveUserData();
+            closeModal('addResourceModal');
+            document.getElementById('resourceForm').reset();
+            refreshUI();
+        }
+
+        function renderResources() {
+            const content = document.getElementById('resourcesContent');
+            
+            if (!appData.resources || appData.resources.length === 0) {
+                content.innerHTML = '<div class="empty-state"><p>No resources added yet. Add one to get started!</p></div>';
+                return;
+            }
+            
+            content.innerHTML = appData.resources
+                .map(resource => `
+                    <div class="card" style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <h4><a href="${resource.url}" target="_blank" style="color: var(--color-primary);">${resource.title}</a></h4>
+                                <p style="margin: 0.5rem 0; color: var(--color-text-secondary);">
+                                    <span style="display: inline-block; background: var(--color-primary); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">${resource.type}</span>
+                                    <span style="display: inline-block; background: var(--color-warning); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem; margin-left: 0.5rem;">${resource.category}</span>
+                                </p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="deleteResource(${resource.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function deleteResource(id) {
+            appData.resources = appData.resources.filter(r => r.id !== id);
+            saveUserData();
+            refreshUI();
+        }
+
+        // Profile Functions
+        function saveProfile() {
+            appData.profile = {
+                name: document.getElementById('profileName').value,
+                examDate: document.getElementById('profileExamDate').value,
+                exam: document.getElementById('profileExam').value
+            };
+            saveUserData();
+            alert('✅ Profile saved!');
+        }
+
+        // Settings Functions
+        function saveTargetColleges() {
+            appData.settings = appData.settings || {};
+            appData.settings.targetColleges = document.getElementById('targetColleges').value;
+            saveUserData();
+            alert('✅ Colleges saved!');
+        }
+
+        function saveDailyGoal() {
+            appData.settings = appData.settings || {};
+            appData.settings.dailyGoal = parseInt(document.getElementById('dailyGoal').value);
+            saveUserData();
+            alert('✅ Daily goal saved!');
+        }
+
+        function exportToJSON() {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `StudyBuddy-Data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        }
+
+        function exportToExcel() {
+            let csv = 'Date,Type,Details\n';
+            
+            appData.mockTests.forEach(test => {
+                csv += `${test.date},Mock Test,"${test.name} - ${test.overall}%ile"\n`;
+            });
+            
+            appData.errors.forEach(error => {
+                csv += `${error.date},Error,"${error.concept} - ${error.subject}"\n`;
+            });
+            
+            const dataBlob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `StudyBuddy-Data-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        appData = { ...appData, ...imported };
+                        saveUserData();
+                        refreshUI();
+                        alert('✅ Data imported successfully!');
+                    } catch (error) {
+                        alert('❌ Error importing file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function confirmClearData() {
+            if (confirm('⚠️ Are you sure you want to delete ALL data? This cannot be undone!')) {
+                appData = {
+                    mockTests: [],
+                    errors: [],
+                    goals: [],
+                    resources: [],
+                    sessions: [],
+                    profile: {},
+                    settings: {}
+                };
+                localStorage.removeItem('studyBuddyData');
+                saveUserData();
+                refreshUI();
+                alert('✅ All data cleared!');
+            }
+        }
+
+        // AI Advisor
+        function getAIRecommendation(type) {
+            const recommendations = {
+                performance: generatePerformanceAnalysis(),
+                weaknesses: generateWeaknessAnalysis(),
+                studyplan: generateStudyPlan()
+            };
+            
+            document.getElementById('aiResponse').innerHTML = `
+                <div class="alert alert-success">
+                    <strong>🤖 AI Analysis:</strong><br>
+                    ${recommendations[type]}
+                </div>
+            `;
+        }
+
+        function generatePerformanceAnalysis() {
+            if (appData.mockTests.length === 0) return 'Add some mock tests to get personalized analysis!';
+            
+            const tests = appData.mockTests.slice(-5);
+            const avgScore = tests.reduce((sum, t) => sum + t.overall, 0) / tests.length;
+            const trend = tests[tests.length - 1].overall - tests[0].overall;
+            
+            return `
+                📊 <strong>Your Recent Performance:</strong><br>
+                • Average Score (Last 5 mocks): <strong>${avgScore.toFixed(1)}</strong>%ile<br>
+                • Trend: <strong>${trend > 0 ? '📈 Improving' : trend < 0 ? '📉 Declining' : '→ Stable'}</strong><br>
+                • Recommendation: ${avgScore > 80 ? 'Keep up the excellent work!' : avgScore > 60 ? 'You\'re on the right track. Focus on weak areas.' : 'Increase study hours and focus on fundamentals.'}
+            `;
+        }
+
+        function generateWeaknessAnalysis() {
+            if (appData.mockTests.length === 0) return 'Add mock tests with section scores to identify weaknesses.';
+            
+            const lastTest = appData.mockTests[appData.mockTests.length - 1];
+            const sections = [
+                { name: 'VARC', score: lastTest.varc },
+                { name: 'DILR', score: lastTest.dilr },
+                { name: 'QA', score: lastTest.qa }
+            ];
+            
+            const weakest = sections.filter(s => s.score).sort((a, b) => a.score - b.score)[0];
+            
+            return `
+                🎯 <strong>Identified Weaknesses:</strong><br>
+                • Weakest Section: <strong>${weakest ? weakest.name + ' (' + weakest.score + '%ile)' : 'Not enough data'}</strong><br>
+                • Action Items:<br>
+                &nbsp;&nbsp;1. Focus on fundamentals in your weak section<br>
+                &nbsp;&nbsp;2. Practice 50+ questions daily in weak areas<br>
+                &nbsp;&nbsp;3. Log errors to track improvements
+            `;
+        }
+
+        function generateStudyPlan() {
+            return `
+                📅 <strong>Recommended Study Plan (Weekly):</strong><br>
+                • <strong>Monday-Wednesday:</strong> Focus on weakest section (3 hours)<br>
+                • <strong>Thursday-Friday:</strong> Balanced practice of all sections (2.5 hours each)<br>
+                • <strong>Saturday:</strong> Full mock test (3 hours)<br>
+                • <strong>Sunday:</strong> Error review and revision (2 hours)<br>
+                <br>
+                💡 Pro Tips:<br>
+                • Use Pomodoro technique (25 min focus, 5 min break)<br>
+                • Log errors immediately after practice<br>
+                • Review errors before each session
+            `;
+        }
+
+        function askAIAdvisor() {
+            const query = document.getElementById('aiQuery').value;
+            if (!query) {
+                alert('Please enter a question');
+                return;
+            }
+            
+            let response = '';
+            
+            if (query.toLowerCase().includes('dilr') || query.toLowerCase().includes('logical reasoning')) {
+                response = '🧩 <strong>DILR Improvement Tips:</strong><br>• Practice 10-15 sets daily<br>• Focus on caselet sets (high scoring)<br>• Improve reading speed<br>• Review your errors regularly';
+            } else if (query.toLowerCase().includes('varc') || query.toLowerCase().includes('reading')) {
+                response = '📖 <strong>VARC Improvement Tips:</strong><br>• Read 5-10 passages daily<br>• Build vocabulary (500+ words)<br>• Practice inference questions<br>• Time yourself (12 min per passage)';
+            } else if (query.toLowerCase().includes('quant') || query.toLowerCase().includes('qa')) {
+                response = '🔢 <strong>QA Improvement Tips:</strong><br>• Master formulas and concepts<br>• Practice 40-50 questions daily<br>• Focus on weak topics<br>• Learn shortcuts and tricks';
+            } else if (query.toLowerCase().includes('time') || query.toLowerCase().includes('manage')) {
+                response = '⏰ <strong>Time Management Strategy:</strong><br>• Allocate 60 mins for VARC, 60 for DILR, 60 for QA<br>• Do easy questions first<br>• Use elimination technique<br>• Don\'t get stuck on one question';
+            } else if (query.toLowerCase().includes('score') || query.toLowerCase().includes('improve')) {
+                response = '📈 <strong>Score Improvement Plan:</strong><br>• Current average: ' + (appData.mockTests.length > 0 ? appData.mockTests[appData.mockTests.length-1].overall.toFixed(1) + '%ile' : 'No data') + '<br>• Focus on accuracy over speed<br>• Take 2 mocks per week<br>• Review every mock thoroughly';
+            } else {
+                response = '💡 <strong>General Advice:</strong><br>• Stay consistent with your study schedule<br>• Focus on quality over quantity<br>• Regular mock tests are crucial<br>• Keep improving gradually<br><br>Good luck with your preparation!';
+            }
+            
+            document.getElementById('aiResponse').innerHTML = `
+                <div class="alert alert-success">
+                    ${response}
+                </div>
+            `;
+        }
+
+        // Dashboard Update
+        function updateDashboard() {
+            document.getElementById('totalHours').textContent = '0';
+            document.getElementById('totalMocks').textContent = appData.mockTests.length;
+            
+            if (appData.mockTests.length > 0) {
+                const lastTenTests = appData.mockTests.slice(-10);
+                const avg = lastTenTests.reduce((sum, t) => sum + t.overall, 0) / lastTenTests.length;
+                document.getElementById('avgScore').textContent = avg.toFixed(1);
+            }
+            
+            const activeErrors = (appData.errors || []).filter(e => e.status !== 'completed').length;
+            document.getElementById('activeErrors').textContent = activeErrors;
+            
+            let streak = 0;
+            const today = new Date();
+            for (let i = 0; i < 365; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                if ((appData.sessions || []).some(s => s.date === dateStr)) {
+                    streak++;
+                } else if (i > 0) break;
+            }
+            document.getElementById('streakCount').textContent = streak;
+            document.getElementById('profileStreak').textContent = streak;
+            
+            document.getElementById('profileTotalHours').textContent = '0h';
+            document.getElementById('profileTotalMocks').textContent = appData.mockTests.length;
+            document.getElementById('profileErrors').textContent = (appData.errors || []).length;
+        }
+
+        function refreshUI() {
+            renderMockTests();
+            renderErrorLog();
+            renderGoals();
+            renderResources();
+            updateDashboard();
+            createMockTrendChart();
+            
+            if (appData.profile) {
+                document.getElementById('profileName').value = appData.profile.name || '';
+                document.getElementById('profileExamDate').value = appData.profile.examDate || '';
+                document.getElementById('profileExam').value = appData.profile.exam || 'CAT';
+            }
+            
+            if (appData.settings) {
+                document.getElementById('targetColleges').value = appData.settings.targetColleges || '';
+                document.getElementById('dailyGoal').value = appData.settings.dailyGoal || 8;
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-color-scheme', theme);
+            document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
+</body>
+</html>
